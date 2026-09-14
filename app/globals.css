@@ -1,0 +1,374 @@
+@import "tailwindcss";
+
+/*
+ * Système visuel dérivé de la référence « Sunday » — canevas blanc, une seule
+ * graisse typographique, aucune ombre portée, légendes en mono — avec l'accent
+ * jaune remplacé par le bleu SOGEA, cohérent avec le schéma d'origine.
+ */
+
+:root {
+  --ink: #1a1a1a;
+  --stone: #6f6f6f;
+  --ash: #eeeeee;
+  --bone: #f7f9fc;
+  --accent: #0f7ad6;
+  --accent-soft: #e4f1fb;
+
+  --text-caption: 12px;
+  --tracking-caption: 0.08em;
+  --tracking-display: -0.025em;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: var(--ink);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ------------------------------- La scène -------------------------------- */
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #ffffff;
+  background-image: radial-gradient(circle, #dde5f0 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.layer {
+  opacity: 1;
+  transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Vue d'ensemble : tout est lisible. Vue focalisée : le reste s'efface. */
+.stage[data-focus] .layer {
+  opacity: 0.12;
+}
+
+.stage[data-focus] .layer[data-part="network"] {
+  opacity: 0.45;
+}
+
+/* L'écoulement remplace les flèches directionnelles du schéma d'origine. */
+.flow {
+  stroke-dasharray: 5 15;
+  animation: flow 1.15s linear infinite;
+  opacity: 0.95;
+}
+
+@keyframes flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+/* ------------------------------ Les pastilles ----------------------------- */
+
+.spot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  transition: opacity 0.45s ease;
+}
+
+.spot[data-on="0"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.spot[data-on="1"] {
+  opacity: 1;
+}
+
+.spot-dot {
+  position: absolute;
+  left: -14px;
+  top: -14px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.spot-dot span {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #ffffff;
+  transition: transform 0.25s ease;
+}
+
+.spot-dot:hover span,
+.spot-dot[aria-expanded="true"] span {
+  transform: scale(1.9);
+}
+
+.spot-card {
+  position: absolute;
+  left: 22px;
+  top: -14px;
+  width: 244px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid var(--ash);
+  border-radius: 12px;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.spot-card[data-open="1"] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.spot-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.spot-detail {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--stone);
+}
+
+/* -------------------------------- L'habillage ------------------------------ */
+
+.brand {
+  position: absolute;
+  top: 28px;
+  left: 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-caption);
+}
+
+.mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--accent);
+  box-shadow: inset 0 0 0 3px #ffffff, inset 0 0 0 4.5px var(--accent-soft);
+}
+
+.brand-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--ash);
+}
+
+.muted {
+  color: var(--stone);
+}
+
+.rail {
+  position: absolute;
+  top: 50%;
+  right: 32px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rail button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: var(--tracking-caption);
+  color: var(--stone);
+  transition: color 0.3s ease;
+}
+
+.rail button[data-on="1"] {
+  color: var(--ink);
+}
+
+.rail-label {
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  order: -1;
+}
+
+.rail button[data-on="1"] .rail-label,
+.rail button:hover .rail-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.rail-bar {
+  width: 22px;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+
+.rail button[data-on="1"] .rail-bar {
+  width: 40px;
+  background: var(--accent);
+}
+
+.rail-idx {
+  width: 18px;
+  text-align: right;
+}
+
+.readout {
+  position: absolute;
+  left: 32px;
+  bottom: 44px;
+  max-width: 460px;
+  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.readout-label {
+  margin: 0 0 14px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-caption);
+  color: var(--stone);
+}
+
+.readout-title {
+  margin: 0 0 16px;
+  font-size: clamp(30px, 4.2vw, 56px);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: var(--tracking-display);
+}
+
+.readout-body {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--stone);
+  max-width: 400px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+.hint {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-caption);
+  letter-spacing: var(--tracking-caption);
+  color: var(--stone);
+  transition: opacity 0.5s ease;
+}
+
+.hint[data-on="0"] {
+  opacity: 0;
+}
+
+/* ------------------------------ Outil de dev ------------------------------ */
+
+.devpanel {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid var(--ash);
+  border-radius: 8px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.devpanel button {
+  border: 0;
+  border-radius: 4px;
+  padding: 6px 10px;
+  background: var(--ink);
+  color: #ffffff;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.devhint {
+  color: var(--stone);
+}
+
+@media (max-width: 860px) {
+  .rail {
+    right: 16px;
+  }
+  .rail-label {
+    display: none;
+  }
+  .readout {
+    left: 20px;
+    right: 20px;
+    bottom: 28px;
+    max-width: none;
+  }
+  .hint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow {
+    animation: none;
+  }
+  .readout {
+    animation: none;
+  }
+}
