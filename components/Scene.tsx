@@ -7,6 +7,7 @@ import {
   view,
   viewport,
 } from "@/lib/camera";
+import { asset } from "@/lib/asset";
 import {
   createRenderer,
   loadImage,
@@ -64,9 +65,9 @@ export default function Scene() {
       try {
         const w = pickWidth();
         const [dry, wet, flow] = await Promise.all([
-          loadImage(`/scene/dry-${w}.webp?v=35`),
-          loadImage(`/scene/wet-${w}.webp?v=35`),
-          loadImage("/scene/flow.png?v=35"),
+          loadImage(asset(`/scene/dry-${w}.webp?v=35`)),
+          loadImage(asset(`/scene/wet-${w}.webp?v=35`)),
+          loadImage(asset("/scene/flow.png?v=35")),
         ]);
         if (cancelled) return;
         renderer = createRenderer(canvas, { dry, wet, flow });

@@ -13,6 +13,7 @@ import { GlassEffect } from "./GlassEffect";
 import { AnimatedGroup } from "@/components/core/animated-group";
 import { TextEffect } from "@/components/core/text-effect";
 import { CHAPTERS } from "@/content/chapters";
+import { asset } from "@/lib/asset";
 import { toScreen, view, viewport } from "@/lib/camera";
 
 const LAST = CHAPTERS.length - 1;
@@ -286,7 +287,7 @@ export default function Journey() {
 
         <header className="brand">
           <img
-            src="/logo-sogea.png"
+            src={asset("/logo-sogea.png")}
             alt="SOGEA Environnement"
             className="brand-logo"
             width={168}
