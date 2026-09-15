@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { cam } from "@/lib/camera";
-import { clamp, fromScreen } from "@/lib/iso";
+import { clamp, halfSpan, view, viewport } from "@/lib/camera";
 
 const noSubscribe = () => () => {};
 const isDev = () => new URLSearchParams(window.location.search).has("dev");
@@ -10,13 +9,12 @@ const isDev = () => new URLSearchParams(window.location.search).has("dev");
 /**
  * Outil de cadrage, activé par `?dev` dans l'URL.
  *
- * Régler à la main les coordonnées de huit chapitres coûte des heures. Ici on
- * cadre à la souris — glisser pour déplacer, molette pour zoomer — puis on
- * copie la valeur prête à coller dans `content/chapters.ts`.
+ * Glisser pour déplacer, alt + molette pour zoomer, shift + molette pour
+ * avancer le front d'eau. Le triplet copié se colle dans `content/chapters.ts`.
  */
 export default function DevCamera() {
   const on = useSyncExternalStore(noSubscribe, isDev, () => false);
-  const [readout, setReadout] = useState({ u: 0, v: 0, zoom: 1 });
+  const [readout, setReadout] = useState({ x: 0.5, y: 0.5, zoom: 1, flow: 0 });
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -32,14 +30,19 @@ export default function DevCamera() {
     };
     const move = (e: PointerEvent) => {
       if (!dragging) return;
-      const d = fromScreen(-e.movementX / cam.zoom, -e.movementY / cam.zoom);
-      cam.u += d.u;
-      cam.v += d.v;
+      const h = halfSpan();
+      view.x -= (e.movementX / viewport.w) * 2 * h.x;
+      view.y -= (e.movementY / viewport.h) * 2 * h.y;
     };
     const wheel = (e: WheelEvent) => {
-      if (!e.altKey) return; // Alt + molette, pour ne pas confisquer le scroll
+      if (e.shiftKey) {
+        e.preventDefault();
+        view.flow = clamp(view.flow + (e.deltaY > 0 ? -0.02 : 0.02), 0, 1);
+        return;
+      }
+      if (!e.altKey) return;
       e.preventDefault();
-      cam.zoom = clamp(cam.zoom * (e.deltaY > 0 ? 0.94 : 1.06), 0.15, 6);
+      view.zoom = clamp(view.zoom * (e.deltaY > 0 ? 0.94 : 1.06), 0.5, 6);
     };
 
     window.addEventListener("pointerdown", down);
@@ -47,7 +50,7 @@ export default function DevCamera() {
     window.addEventListener("pointermove", move);
     window.addEventListener("wheel", wheel, { passive: false });
     const tick = setInterval(
-      () => setReadout({ u: cam.u, v: cam.v, zoom: cam.zoom }),
+      () => setReadout({ x: view.x, y: view.y, zoom: view.zoom, flow: view.flow }),
       120,
     );
 
@@ -62,7 +65,7 @@ export default function DevCamera() {
 
   if (!on) return null;
 
-  const snippet = `{ u: ${readout.u.toFixed(1)}, v: ${readout.v.toFixed(1)}, zoom: ${readout.zoom.toFixed(2)} }`;
+  const snippet = `{ x: ${readout.x.toFixed(3)}, y: ${readout.y.toFixed(3)}, zoom: ${readout.zoom.toFixed(2)}, flow: ${readout.flow.toFixed(2)} }`;
 
   return (
     <div className="devpanel">
@@ -77,7 +80,7 @@ export default function DevCamera() {
       >
         {copied ? "Copié" : "Copier le cadrage"}
       </button>
-      <span className="devhint">glisser : déplacer · alt + molette : zoomer</span>
+      <span className="devhint">glisser · alt+molette zoom · shift+molette eau</span>
     </div>
   );
 }

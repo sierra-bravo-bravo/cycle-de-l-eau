@@ -1,41 +1,59 @@
 /**
- * État de caméra partagé, muté à 60 fps hors du cycle de rendu React.
+ * État de la vue, muté à 60 fps hors du cycle de rendu React.
  *
- * `u` et `v` désignent le point du sol centré à l'écran, `zoom` le facteur
- * d'échelle. Ces trois valeurs suffisent à décrire un cadrage isométrique :
- * l'orientation est figée, ce qui rend impossible de casser la perspective.
- * Le rendu Three.js de la phase B consommera le même objet.
+ * Le repère est celui de l'image : `x` et `y` sont des fractions de la largeur
+ * et de la hauteur du visuel (origine en haut à gauche), `zoom` vaut 1 quand
+ * la largeur entière tient dans la fenêtre. `flow` est l'avancée du front
+ * d'eau le long du réseau, dans l'échelle de la carte d'écoulement.
  */
 
-import type { Point } from "./iso";
-import { project } from "./iso";
+export type View = { x: number; y: number; zoom: number; flow: number };
 
-export type Cam = { u: number; v: number; zoom: number };
+export const view: View = { x: 0.5, y: 0.5, zoom: 1, flow: 0 };
 
-export const cam: Cam = { u: 0, v: 0, zoom: 0.52 };
+/** Rapport largeur / hauteur du cadre commun aux deux visuels. */
+export const IMAGE_ASPECT = 4095 / 2364;
+
+export const viewport = { w: 1440, h: 900 };
+
+export const clamp = (n: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, n));
 
 /**
- * `fit` adapte les cadrages, calibrés pour un écran large, aux fenêtres plus
- * étroites. Il est appliqué au rendu et non dans la timeline, pour qu'un
- * redimensionnement en cours de parcours soit pris en compte immédiatement.
+ * Zoom qui fait tenir le visuel entier dans la fenêtre (letterbox blanc
+ * accepté). `view.zoom` est un multiplicateur de ce cadrage : 1 = tout le
+ * cycle visible, 0.75 = un cran plus large, 2 = deux fois plus près.
  */
-export const viewport = { w: 1440, h: 900, fit: 1 };
-
-const scale = () => cam.zoom * viewport.fit;
-
-/** Coordonnées monde `(u, v, h)` → pixels écran, au cadrage courant. */
-export function toScreen(u: number, v: number, h = 0): Point {
-  const p = project(u, v, h);
-  const c = project(cam.u, cam.v, 0);
-  const z = scale();
-  return {
-    x: viewport.w / 2 + (p.x - c.x) * z,
-    y: viewport.h / 2 + (p.y - c.y) * z,
-  };
+export function containZoom(): number {
+  const canvasAspect = viewport.w / Math.max(1, viewport.h);
+  return Math.min(1, IMAGE_ASPECT / canvasAspect);
 }
 
-/** Transformation SVG équivalente, appliquée au groupe racine de la scène. */
-export function sceneTransform(): string {
-  const c = project(cam.u, cam.v, 0);
-  return `scale(${scale().toFixed(4)}) translate(${(-c.x).toFixed(2)} ${(-c.y).toFixed(2)})`;
+export function effectiveZoom(): number {
+  return containZoom() * Math.max(0.5, view.zoom);
+}
+
+/** Demi-étendue visible, en fractions d'image. */
+export function halfSpan(): { x: number; y: number } {
+  const z = effectiveZoom();
+  const canvasAspect = viewport.w / Math.max(1, viewport.h);
+  return { x: 0.5 / z, y: (0.5 * IMAGE_ASPECT) / (canvasAspect * z) };
+}
+
+/** Centre de vue borné pour que le cadrage reste à l'intérieur du visuel. */
+export function clampedCenter(): { x: number; y: number } {
+  const h = halfSpan();
+  const fit = (c: number, half: number) =>
+    half >= 0.5 ? 0.5 : Math.min(1 - half, Math.max(half, c));
+  return { x: fit(view.x, h.x), y: fit(view.y, h.y) };
+}
+
+/** Position image (fractions) → pixels écran, au cadrage courant. */
+export function toScreen(x: number, y: number): { x: number; y: number } {
+  const c = clampedCenter();
+  const h = halfSpan();
+  return {
+    x: ((x - c.x) / (2 * h.x) + 0.5) * viewport.w,
+    y: ((y - c.y) / (2 * h.y) + 0.5) * viewport.h,
+  };
 }

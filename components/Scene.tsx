@@ -1,67 +1,106 @@
 "use client";
 
-import { useMemo } from "react";
-import { depth } from "@/lib/iso";
-import { toFaces, type Face } from "@/lib/solids";
-import { LANDSCAPE, NETWORK, STATIONS } from "@/content/plan";
+import { useEffect, useRef, useState } from "react";
+import {
+  clampedCenter,
+  halfSpan,
+  view,
+  viewport,
+} from "@/lib/camera";
+import {
+  createRenderer,
+  loadImage,
+  pickWidth,
+  type WaterRenderer,
+} from "@/lib/waterGL";
 
 /**
- * Rendu SVG de la scène.
+ * Canvas WebGL de la scène.
  *
- * Les stations ne s'interpénètrent pas, on peut donc trier les faces à
- * l'intérieur de chaque station et ordonner les stations entre elles par
- * profondeur. Cela préserve des groupes DOM stables, indispensables pour
- * estomper une station entière sans artefact de transparence entre ses faces.
+ * Lit `view` à chaque frame : GSAP mute le cadrage et le front d'eau, le
+ * shader substitue le visuel rempli au visuel à vide le long du réseau.
  */
+export default function Scene() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
-function Faces({ faces }: { faces: Face[] }) {
-  return (
-    <>
-      {faces.map((f, i) =>
-        f.type === "fill" ? (
-          <path key={i} d={f.d} fill={f.fill} />
-        ) : (
-          <path
-            key={i}
-            d={f.d}
-            fill="none"
-            stroke={f.stroke}
-            strokeWidth={f.width}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={f.flow ? "flow" : undefined}
-          />
-        ),
-      )}
-    </>
-  );
-}
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-export default function Scene({ sceneRef }: { sceneRef: React.Ref<SVGGElement> }) {
-  const layers = useMemo(() => {
-    const ordered = [...STATIONS].sort(
-      (a, b) => depth(a.origin.u, a.origin.v) - depth(b.origin.u, b.origin.v),
-    );
-    return {
-      landscape: toFaces(LANDSCAPE),
-      network: toFaces(NETWORK),
-      stations: ordered.map((s) => ({ id: s.id, faces: toFaces(s.solids) })),
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let renderer: WaterRenderer | null = null;
+    let raf = 0;
+    let start = 0;
+    let cancelled = false;
+
+    const draw = (now: number) => {
+      if (!renderer) return;
+      if (!start) start = now;
+      const c = clampedCenter();
+      const h = halfSpan();
+      renderer.draw({
+        centerX: c.x,
+        centerY: c.y,
+        halfX: h.x,
+        halfY: h.y,
+        progress: view.flow,
+        time: reduced ? 0 : (now - start) / 1000,
+        resX: viewport.w,
+        resY: viewport.h,
+        fadePx: 80,
+      });
+      raf = requestAnimationFrame(draw);
+    };
+
+    const resize = () => {
+      viewport.w = window.innerWidth;
+      viewport.h = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      renderer?.resize(viewport.w, viewport.h, dpr);
+    };
+
+    (async () => {
+      try {
+        const w = pickWidth();
+        const [dry, wet, flow] = await Promise.all([
+          loadImage(`/scene/dry-${w}.webp?v=35`),
+          loadImage(`/scene/wet-${w}.webp?v=35`),
+          loadImage("/scene/flow.png?v=35"),
+        ]);
+        if (cancelled) return;
+        renderer = createRenderer(canvas, { dry, wet, flow });
+        resize();
+        setStatus("ready");
+        raf = requestAnimationFrame(draw);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setStatus("error");
+      }
+    })();
+
+    window.addEventListener("resize", resize);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+      renderer?.dispose();
     };
   }, []);
 
   return (
-    <g ref={sceneRef}>
-      <g className="layer">
-        <Faces faces={layers.landscape} />
-      </g>
-      <g className="layer" data-part="network">
-        <Faces faces={layers.network} />
-      </g>
-      {layers.stations.map((s) => (
-        <g key={s.id} className="layer" data-part={s.id}>
-          <Faces faces={s.faces} />
-        </g>
-      ))}
-    </g>
+    <>
+      <canvas ref={canvasRef} className="canvas" aria-hidden="true" />
+      {status === "loading" && (
+        <p className="loader" role="status">
+          Chargement de la scène
+        </p>
+      )}
+      {status === "error" && (
+        <p className="loader" role="alert">
+          Impossible de charger le visuel
+        </p>
+      )}
+    </>
   );
 }
