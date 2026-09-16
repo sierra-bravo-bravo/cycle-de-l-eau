@@ -21,7 +21,7 @@ const POINTS = {
   production: [0.185, 0.369],
   "chateau d'eau": [0.262, 0.604],
   tranchee: [0.439, 0.586],
-  "maison / collecte": [0.572, 0.257],
+  "maison / collecte": [0.658, 0.214],
   "transfert vers station": [0.679, 0.342],
   "clarificateurs": [0.789, 0.435],
   exutoire: [0.903, 0.595],

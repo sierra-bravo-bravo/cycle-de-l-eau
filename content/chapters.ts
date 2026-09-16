@@ -107,8 +107,8 @@ export const CHAPTERS: Chapter[] = [
     focus: { x: 0.559, y: 0.266, zoom: 1.76, flow: 0.68 },
     hotspots: [
       {
-        x: 0.572,
-        y: 0.257,
+        x: 0.658,
+        y: 0.214,
         title: "Abonnés",
         detail:
           "Le branchement domestique restitue les eaux usées au collecteur, premier maillon de l'assainissement.",
