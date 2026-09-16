@@ -239,7 +239,7 @@ b {
 
 .brand-logo {
   display: block;
-  height: 36px;
+  height: 54px;
   width: auto;
 }
 
@@ -347,7 +347,8 @@ b {
   margin: 0;
   width: min(92vw, 1100px);
   text-align: center;
-  font-weight: 400;
+  font-family: var(--font-vinci), Georgia, "Times New Roman", serif;
+  font-weight: 300;
   line-height: 1.05;
 }
 
@@ -359,7 +360,7 @@ b {
   display: block;
   white-space: nowrap;
   font-size: clamp(40px, 6.4vw, 92px);
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
 }
 
 .hero-line-top {

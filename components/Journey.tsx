@@ -290,8 +290,8 @@ export default function Journey() {
             src={asset("/logo-sogea.png")}
             alt="SOGEA Environnement"
             className="brand-logo"
-            width={168}
-            height={40}
+            width={252}
+            height={60}
           />
           <span className="brand-sep" />
           <span className="muted">Le cycle de l&apos;eau</span>
